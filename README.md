@@ -6,6 +6,7 @@ A lightweight PHP CLI for logging scholar casework signals (attendance, academic
 - Log casework notes with priorities, tags, and follow-up dates.
 - List and filter notes by scholar, priority, or time window.
 - Generate quick stats snapshots for recent activity.
+- Track upcoming or overdue follow-ups for outreach planning.
 - Export filtered notes to CSV for reporting.
 
 ## Setup
@@ -30,6 +31,8 @@ export GS_CASEWORK_SCHEMA="groupscholar_casework_ledger"
 ./bin/gs-casework add --scholar="Maya Chen" --type="financial" --note="FAFSA verification pending" --priority=medium --tags=fafsa,docs --follow-up=2026-02-15
 ./bin/gs-casework list --priority=high --since="2026-01-01"
 ./bin/gs-casework stats --days=30
+./bin/gs-casework followups --days=21
+./bin/gs-casework followups --overdue=true --priority=high
 ./bin/gs-casework export --output=casework.csv
 ```
 

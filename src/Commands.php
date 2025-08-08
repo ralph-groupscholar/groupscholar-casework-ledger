@@ -41,6 +41,11 @@ final class Commands
             return;
         }
 
+        if ($command === 'followups') {
+            self::handleFollowUps($options);
+            return;
+        }
+
         if ($command === 'export') {
             self::handleExport($options);
             return;
@@ -198,6 +203,56 @@ final class Commands
         fwrite(STDOUT, "Exported " . count($notes) . " notes to {$output}.\n");
     }
 
+    private static function handleFollowUps(array $options): void
+    {
+        $today = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d');
+        $windowDays = (int) ($options['days'] ?? 14);
+        if ($windowDays <= 0) {
+            $windowDays = 14;
+        }
+
+        $start = $options['start'] ?? $today;
+        $end = $options['end'] ?? (new DateTimeImmutable($start, new DateTimeZone('UTC')))
+            ->add(new DateInterval('P' . $windowDays . 'D'))
+            ->format('Y-m-d');
+        $overdue = ($options['overdue'] ?? '') === 'true';
+
+        $pdo = Database::connect();
+        $dsn = getenv('GS_CASEWORK_DSN') ?: '';
+        $schema = Database::schema();
+        $driver = Database::driver($pdo, $dsn);
+        $repo = new CaseworkRepository($pdo, $schema, $driver);
+
+        $notes = $repo->listFollowUps([
+            'scholar_name' => $options['scholar'] ?? '',
+            'priority' => $options['priority'] ?? '',
+            'overdue' => $overdue ? 'true' : '',
+            'today' => $today,
+            'start' => $overdue ? '' : $start,
+            'end' => $overdue ? '' : $end,
+        ]);
+
+        if (!$notes) {
+            fwrite(STDOUT, "No follow-ups found.\n");
+            return;
+        }
+
+        $label = $overdue ? 'Overdue follow-ups' : "Follow-ups from {$start} to {$end}";
+        fwrite(STDOUT, $label . ":\n");
+        foreach ($notes as $note) {
+            $line = sprintf(
+                "#%s | due %s | %s | %s | %s | %s\n",
+                $note['id'],
+                $note['follow_up_on'],
+                $note['scholar_name'],
+                $note['note_type'],
+                $note['priority'],
+                $note['note_body']
+            );
+            fwrite(STDOUT, $line);
+        }
+    }
+
     private static function parseOptions(array $args): array
     {
         $options = [];
@@ -223,6 +278,7 @@ Usage:
   gs-casework add --scholar="Name" --type="attendance" --note="Summary" [--priority=high] [--tags=comma,list] [--follow-up=YYYY-MM-DD]
   gs-casework list [--scholar="Name"] [--priority=high] [--since="YYYY-MM-DD"]
   gs-casework stats [--days=30]
+  gs-casework followups [--scholar="Name"] [--priority=high] [--start=YYYY-MM-DD] [--end=YYYY-MM-DD] [--days=14] [--overdue=true]
   gs-casework export [--scholar="Name"] [--priority=high] [--since="YYYY-MM-DD"] [--output=casework.csv]
 
 Environment:

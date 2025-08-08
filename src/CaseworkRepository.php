@@ -95,4 +95,44 @@ final class CaseworkRepository
             'types' => $typeStmt->fetchAll(),
         ];
     }
+
+    public function listFollowUps(array $filters): array
+    {
+        $table = Database::qualify('casework_notes', $this->schema, $this->driver);
+        $conditions = ['follow_up_on IS NOT NULL'];
+        $params = [];
+
+        if (!empty($filters['scholar_name'])) {
+            $conditions[] = 'scholar_name LIKE :scholar_name';
+            $params['scholar_name'] = '%' . $filters['scholar_name'] . '%';
+        }
+
+        if (!empty($filters['priority'])) {
+            $conditions[] = 'priority = :priority';
+            $params['priority'] = $filters['priority'];
+        }
+
+        if (!empty($filters['overdue'])) {
+            $conditions[] = 'follow_up_on < :today';
+            $params['today'] = $filters['today'];
+        } else {
+            if (!empty($filters['start'])) {
+                $conditions[] = 'follow_up_on >= :start';
+                $params['start'] = $filters['start'];
+            }
+            if (!empty($filters['end'])) {
+                $conditions[] = 'follow_up_on <= :end';
+                $params['end'] = $filters['end'];
+            }
+        }
+
+        $where = 'WHERE ' . implode(' AND ', $conditions);
+        $statement = $this->pdo->prepare(
+            "SELECT id, scholar_name, note_type, priority, tags, note_body, follow_up_on, created_at"
+            . " FROM {$table} {$where} ORDER BY follow_up_on ASC LIMIT 200"
+        );
+        $statement->execute($params);
+
+        return $statement->fetchAll();
+    }
 }
