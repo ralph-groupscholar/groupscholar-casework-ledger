@@ -43,6 +43,16 @@ $notes = [
         'note_body' => 'Reported improved midterm scores after tutoring sessions.',
         'follow_up_on' => null,
     ],
+    [
+        'scholar_name' => 'Jordan Patel',
+        'note_type' => 'wellness',
+        'priority' => 'medium',
+        'tags' => 'check-in,resources',
+        'note_body' => 'Connected with campus counseling resources; follow-up completed.',
+        'follow_up_on' => '2026-02-05',
+        'status' => 'resolved',
+        'completed_at' => '2026-02-05 16:30:00',
+    ],
 ];
 
 foreach ($notes as $note) {

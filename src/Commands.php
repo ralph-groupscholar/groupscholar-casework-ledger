@@ -46,6 +46,11 @@ final class Commands
             return;
         }
 
+        if ($command === 'resolve') {
+            self::handleResolve($options);
+            return;
+        }
+
         if ($command === 'export') {
             self::handleExport($options);
             return;
@@ -113,6 +118,7 @@ final class Commands
             'scholar_name' => $options['scholar'] ?? '',
             'priority' => $options['priority'] ?? '',
             'since' => $options['since'] ?? '',
+            'status' => $options['status'] ?? '',
         ]);
 
         if (!$notes) {
@@ -122,12 +128,13 @@ final class Commands
 
         foreach ($notes as $note) {
             $line = sprintf(
-                "#%s | %s | %s | %s | %s | %s\n",
+                "#%s | %s | %s | %s | %s | %s | %s\n",
                 $note['id'],
                 $note['created_at'],
                 $note['scholar_name'],
                 $note['note_type'],
                 $note['priority'],
+                $note['status'],
                 $note['note_body']
             );
             fwrite(STDOUT, $line);
@@ -177,6 +184,7 @@ final class Commands
             'scholar_name' => $options['scholar'] ?? '',
             'priority' => $options['priority'] ?? '',
             'since' => $options['since'] ?? '',
+            'status' => $options['status'] ?? '',
         ]);
 
         $handle = fopen($output, 'w');
@@ -185,7 +193,7 @@ final class Commands
             exit(1);
         }
 
-        fputcsv($handle, ['id', 'created_at', 'scholar_name', 'note_type', 'priority', 'tags', 'note_body', 'follow_up_on']);
+        fputcsv($handle, ['id', 'created_at', 'scholar_name', 'note_type', 'priority', 'status', 'tags', 'note_body', 'follow_up_on', 'completed_at']);
         foreach ($notes as $note) {
             fputcsv($handle, [
                 $note['id'],
@@ -193,9 +201,11 @@ final class Commands
                 $note['scholar_name'],
                 $note['note_type'],
                 $note['priority'],
+                $note['status'],
                 $note['tags'],
                 $note['note_body'],
                 $note['follow_up_on'],
+                $note['completed_at'],
             ]);
         }
         fclose($handle);
@@ -253,6 +263,33 @@ final class Commands
         }
     }
 
+    private static function handleResolve(array $options): void
+    {
+        if (empty($options['id'])) {
+            fwrite(STDERR, "Missing required option --id.\n");
+            exit(1);
+        }
+
+        $pdo = Database::connect();
+        $dsn = getenv('GS_CASEWORK_DSN') ?: '';
+        $schema = Database::schema();
+        $driver = Database::driver($pdo, $dsn);
+        Schema::ensure($pdo, $driver, $schema);
+
+        $completedAt = $options['completed'] ?? (new DateTimeImmutable('now', new DateTimeZone('UTC')))
+            ->format('Y-m-d H:i:s');
+
+        $repo = new CaseworkRepository($pdo, $schema, $driver);
+        $updated = $repo->resolveNote((int) $options['id'], $completedAt);
+
+        if (!$updated) {
+            fwrite(STDERR, "No note found for id {$options['id']}.\n");
+            exit(1);
+        }
+
+        fwrite(STDOUT, "Resolved note {$options['id']}.\n");
+    }
+
     private static function parseOptions(array $args): array
     {
         $options = [];
@@ -276,10 +313,11 @@ Groupscholar Casework Ledger
 Usage:
   gs-casework init
   gs-casework add --scholar="Name" --type="attendance" --note="Summary" [--priority=high] [--tags=comma,list] [--follow-up=YYYY-MM-DD]
-  gs-casework list [--scholar="Name"] [--priority=high] [--since="YYYY-MM-DD"]
+  gs-casework list [--scholar="Name"] [--priority=high] [--since="YYYY-MM-DD"] [--status=open]
   gs-casework stats [--days=30]
   gs-casework followups [--scholar="Name"] [--priority=high] [--start=YYYY-MM-DD] [--end=YYYY-MM-DD] [--days=14] [--overdue=true]
-  gs-casework export [--scholar="Name"] [--priority=high] [--since="YYYY-MM-DD"] [--output=casework.csv]
+  gs-casework resolve --id=123 [--completed="YYYY-MM-DD HH:MM:SS"]
+  gs-casework export [--scholar="Name"] [--priority=high] [--since="YYYY-MM-DD"] [--status=open] [--output=casework.csv]
 
 Environment:
   GS_CASEWORK_DSN (required)

@@ -26,10 +26,14 @@ final class Schema
                 . "  tags TEXT NOT NULL,\n"
                 . "  note_body TEXT NOT NULL,\n"
                 . "  follow_up_on DATE NULL,\n"
+                . "  status TEXT NOT NULL DEFAULT 'open',\n"
+                . "  completed_at TIMESTAMP NULL,\n"
                 . "  created_at TIMESTAMP NOT NULL,\n"
                 . "  updated_at TIMESTAMP NOT NULL\n"
                 . ")"
             );
+            $pdo->exec("ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open'");
+            $pdo->exec("ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP NULL");
             return;
         }
 
@@ -42,9 +46,20 @@ final class Schema
             . "  tags TEXT NOT NULL,\n"
             . "  note_body TEXT NOT NULL,\n"
             . "  follow_up_on TEXT NULL,\n"
+            . "  status TEXT NOT NULL DEFAULT 'open',\n"
+            . "  completed_at TEXT NULL,\n"
             . "  created_at TEXT NOT NULL,\n"
             . "  updated_at TEXT NOT NULL\n"
             . ")"
         );
+
+        $columns = $pdo->query("PRAGMA table_info({$table})")->fetchAll(PDO::FETCH_ASSOC);
+        $columnNames = array_column($columns, 'name');
+        if (!in_array('status', $columnNames, true)) {
+            $pdo->exec("ALTER TABLE {$table} ADD COLUMN status TEXT NOT NULL DEFAULT 'open'");
+        }
+        if (!in_array('completed_at', $columnNames, true)) {
+            $pdo->exec("ALTER TABLE {$table} ADD COLUMN completed_at TEXT NULL");
+        }
     }
 }

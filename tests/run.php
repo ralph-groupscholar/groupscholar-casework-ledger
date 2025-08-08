@@ -36,7 +36,7 @@ $repo->addNote([
     'note_body' => 'Test note',
     'follow_up_on' => null,
 ]);
-$repo->addNote([
+$overdueId = $repo->addNote([
     'scholar_name' => 'Overdue Scholar',
     'note_type' => 'wellness',
     'priority' => 'medium',
@@ -52,6 +52,8 @@ $repo->addNote([
     'note_body' => 'Upcoming follow-up note',
     'follow_up_on' => '2026-03-01',
 ]);
+
+$repo->resolveNote($overdueId, '2026-02-05 12:00:00');
 
 $notes = $repo->listNotes(['scholar_name' => 'Test', 'priority' => 'high', 'since' => '2000-01-01 00:00:00']);
 assertTrue(count($notes) === 1, 'expected one note to be returned');
@@ -69,8 +71,7 @@ $overdue = $repo->listFollowUps([
     'start' => '',
     'end' => '',
 ]);
-assertTrue(count($overdue) === 1, 'expected one overdue follow-up');
-assertTrue($overdue[0]['scholar_name'] === 'Overdue Scholar', 'expected overdue scholar');
+assertTrue(count($overdue) === 0, 'expected resolved overdue follow-up to be excluded');
 
 $upcoming = $repo->listFollowUps([
     'scholar_name' => '',
@@ -82,5 +83,13 @@ $upcoming = $repo->listFollowUps([
 ]);
 assertTrue(count($upcoming) === 1, 'expected one upcoming follow-up');
 assertTrue($upcoming[0]['scholar_name'] === 'Upcoming Scholar', 'expected upcoming scholar');
+
+$resolved = $repo->listNotes([
+    'scholar_name' => '',
+    'priority' => '',
+    'since' => '2000-01-01 00:00:00',
+    'status' => 'resolved',
+]);
+assertTrue(count($resolved) === 1, 'expected one resolved note');
 
 fwrite(STDOUT, "All tests passed.\n");

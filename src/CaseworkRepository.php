@@ -25,10 +25,12 @@ final class CaseworkRepository
     {
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $table = Database::qualify('casework_notes', $this->schema, $this->driver);
+        $status = $payload['status'] ?? 'open';
+        $completedAt = $payload['completed_at'] ?? null;
 
         $statement = $this->pdo->prepare(
-            "INSERT INTO {$table} (scholar_name, note_type, priority, tags, note_body, follow_up_on, created_at, updated_at)"
-            . " VALUES (:scholar_name, :note_type, :priority, :tags, :note_body, :follow_up_on, :created_at, :updated_at)"
+            "INSERT INTO {$table} (scholar_name, note_type, priority, tags, note_body, follow_up_on, status, completed_at, created_at, updated_at)"
+            . " VALUES (:scholar_name, :note_type, :priority, :tags, :note_body, :follow_up_on, :status, :completed_at, :created_at, :updated_at)"
         );
 
         $statement->execute([
@@ -38,6 +40,8 @@ final class CaseworkRepository
             'tags' => $payload['tags'],
             'note_body' => $payload['note_body'],
             'follow_up_on' => $payload['follow_up_on'],
+            'status' => $status,
+            'completed_at' => $completedAt,
             'created_at' => $now->format('Y-m-d H:i:s'),
             'updated_at' => $now->format('Y-m-d H:i:s'),
         ]);
@@ -66,9 +70,14 @@ final class CaseworkRepository
             $params['since'] = $filters['since'];
         }
 
+        if (!empty($filters['status'])) {
+            $conditions[] = 'status = :status';
+            $params['status'] = $filters['status'];
+        }
+
         $where = $conditions ? ('WHERE ' . implode(' AND ', $conditions)) : '';
         $statement = $this->pdo->prepare(
-            "SELECT id, scholar_name, note_type, priority, tags, note_body, follow_up_on, created_at"
+            "SELECT id, scholar_name, note_type, priority, tags, note_body, follow_up_on, status, completed_at, created_at"
             . " FROM {$table} {$where} ORDER BY created_at DESC LIMIT 200"
         );
         $statement->execute($params);
@@ -99,7 +108,7 @@ final class CaseworkRepository
     public function listFollowUps(array $filters): array
     {
         $table = Database::qualify('casework_notes', $this->schema, $this->driver);
-        $conditions = ['follow_up_on IS NOT NULL'];
+        $conditions = ['follow_up_on IS NOT NULL', "status = 'open'"];
         $params = [];
 
         if (!empty($filters['scholar_name'])) {
@@ -128,11 +137,30 @@ final class CaseworkRepository
 
         $where = 'WHERE ' . implode(' AND ', $conditions);
         $statement = $this->pdo->prepare(
-            "SELECT id, scholar_name, note_type, priority, tags, note_body, follow_up_on, created_at"
+            "SELECT id, scholar_name, note_type, priority, tags, note_body, follow_up_on, status, completed_at, created_at"
             . " FROM {$table} {$where} ORDER BY follow_up_on ASC LIMIT 200"
         );
         $statement->execute($params);
 
         return $statement->fetchAll();
+    }
+
+    public function resolveNote(int $id, string $completedAt): bool
+    {
+        $table = Database::qualify('casework_notes', $this->schema, $this->driver);
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+
+        $statement = $this->pdo->prepare(
+            "UPDATE {$table} SET status = :status, completed_at = :completed_at, updated_at = :updated_at WHERE id = :id"
+        );
+
+        $statement->execute([
+            'status' => 'resolved',
+            'completed_at' => $completedAt,
+            'updated_at' => $now->format('Y-m-d H:i:s'),
+            'id' => $id,
+        ]);
+
+        return $statement->rowCount() > 0;
     }
 }
