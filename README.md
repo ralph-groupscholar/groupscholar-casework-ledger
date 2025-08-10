@@ -27,6 +27,12 @@ export GS_CASEWORK_SCHEMA="groupscholar_casework_ledger"
 ./bin/gs-casework init
 ```
 
+4. Load sample casework notes (optional):
+
+```bash
+./bin/gs-casework seed
+```
+
 ## Usage
 ```bash
 ./bin/gs-casework add --scholar="Maya Chen" --type="financial" --note="FAFSA verification pending" --priority=medium --tags=fafsa,docs --follow-up=2026-02-15
@@ -36,6 +42,7 @@ export GS_CASEWORK_SCHEMA="groupscholar_casework_ledger"
 ./bin/gs-casework followups --days=21
 ./bin/gs-casework followups --overdue=true --priority=high
 ./bin/gs-casework export --output=casework.csv --status=open
+./bin/gs-casework seed --force=true
 ```
 
 ## Tests

@@ -5,8 +5,10 @@ declare(strict_types=1);
 require __DIR__ . '/../src/Database.php';
 require __DIR__ . '/../src/Schema.php';
 require __DIR__ . '/../src/CaseworkRepository.php';
+require __DIR__ . '/../src/CaseworkSeed.php';
 
 use GroupScholar\CaseworkLedger\CaseworkRepository;
+use GroupScholar\CaseworkLedger\CaseworkSeed;
 use GroupScholar\CaseworkLedger\Database;
 use GroupScholar\CaseworkLedger\Schema;
 
@@ -28,6 +30,10 @@ $driver = Database::driver($pdo, 'sqlite::memory:');
 Schema::ensure($pdo, $driver, '');
 
 $repo = new CaseworkRepository($pdo, '', $driver);
+$seeded = $repo->seedNotes(CaseworkSeed::notes());
+assertTrue($seeded === 4, 'expected four seed notes to be inserted');
+assertTrue($repo->countNotes() === 4, 'expected four total notes after seeding');
+
 $repo->addNote([
     'scholar_name' => 'Test Scholar',
     'note_type' => 'attendance',
@@ -52,6 +58,11 @@ $repo->addNote([
     'note_body' => 'Upcoming follow-up note',
     'follow_up_on' => '2026-03-01',
 ]);
+
+$seededAgain = $repo->seedNotes(CaseworkSeed::notes());
+assertTrue($seededAgain === 0, 'expected seed to skip when notes exist');
+
+assertTrue($repo->countNotes() === 3, 'expected three notes after seeding');
 
 $repo->resolveNote($overdueId, '2026-02-05 12:00:00');
 
@@ -90,6 +101,6 @@ $resolved = $repo->listNotes([
     'since' => '2000-01-01 00:00:00',
     'status' => 'resolved',
 ]);
-assertTrue(count($resolved) === 1, 'expected one resolved note');
+assertTrue(count($resolved) === 2, 'expected seeded and resolved note');
 
 fwrite(STDOUT, "All tests passed.\n");

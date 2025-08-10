@@ -105,6 +105,30 @@ final class CaseworkRepository
         ];
     }
 
+    public function countNotes(): int
+    {
+        $table = Database::qualify('casework_notes', $this->schema, $this->driver);
+        $statement = $this->pdo->query("SELECT COUNT(*) AS total FROM {$table}");
+        $result = $statement->fetch();
+
+        return isset($result['total']) ? (int) $result['total'] : 0;
+    }
+
+    public function seedNotes(array $notes, bool $force = false): int
+    {
+        if (!$force && $this->countNotes() > 0) {
+            return 0;
+        }
+
+        $inserted = 0;
+        foreach ($notes as $note) {
+            $this->addNote($note);
+            $inserted++;
+        }
+
+        return $inserted;
+    }
+
     public function listFollowUps(array $filters): array
     {
         $table = Database::qualify('casework_notes', $this->schema, $this->driver);
