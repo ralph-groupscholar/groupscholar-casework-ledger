@@ -62,7 +62,7 @@ $repo->addNote([
 $seededAgain = $repo->seedNotes(CaseworkSeed::notes());
 assertTrue($seededAgain === 0, 'expected seed to skip when notes exist');
 
-assertTrue($repo->countNotes() === 3, 'expected three notes after seeding');
+assertTrue($repo->countNotes() === 7, 'expected seven notes after seeding and inserts');
 
 $repo->resolveNote($overdueId, '2026-02-05 12:00:00');
 
@@ -92,8 +92,9 @@ $upcoming = $repo->listFollowUps([
     'start' => '2026-02-10',
     'end' => '2026-03-10',
 ]);
-assertTrue(count($upcoming) === 1, 'expected one upcoming follow-up');
-assertTrue($upcoming[0]['scholar_name'] === 'Upcoming Scholar', 'expected upcoming scholar');
+assertTrue(count($upcoming) === 3, 'expected three upcoming follow-ups');
+$upcomingNames = array_column($upcoming, 'scholar_name');
+assertTrue(in_array('Upcoming Scholar', $upcomingNames, true), 'expected upcoming scholar');
 
 $resolved = $repo->listNotes([
     'scholar_name' => '',

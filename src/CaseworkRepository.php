@@ -187,4 +187,48 @@ final class CaseworkRepository
 
         return $statement->rowCount() > 0;
     }
+
+    public function openQueueSummary(array $filters): array
+    {
+        $table = Database::qualify('casework_notes', $this->schema, $this->driver);
+        $conditions = ["status = 'open'"];
+        $params = [
+            'today' => $filters['today'],
+        ];
+
+        if (!empty($filters['priority'])) {
+            $conditions[] = 'priority = :priority';
+            $params['priority'] = $filters['priority'];
+        }
+
+        if (!empty($filters['since'])) {
+            $conditions[] = 'created_at >= :since';
+            $params['since'] = $filters['since'];
+        }
+
+        $where = 'WHERE ' . implode(' AND ', $conditions);
+        $limit = $filters['limit'] ?? 200;
+        if (!is_int($limit)) {
+            $limit = (int) $limit;
+        }
+        if ($limit <= 0) {
+            $limit = 200;
+        }
+
+        $statement = $this->pdo->prepare(
+            "SELECT scholar_name,\n"
+            . "  COUNT(*) AS open_count,\n"
+            . "  SUM(CASE WHEN follow_up_on IS NOT NULL AND follow_up_on < :today THEN 1 ELSE 0 END) AS overdue_count,\n"
+            . "  MIN(follow_up_on) AS next_follow_up,\n"
+            . "  MAX(created_at) AS last_note_at\n"
+            . "FROM {$table}\n"
+            . "{$where}\n"
+            . "GROUP BY scholar_name\n"
+            . "ORDER BY open_count DESC, scholar_name ASC\n"
+            . "LIMIT {$limit}"
+        );
+        $statement->execute($params);
+
+        return $statement->fetchAll();
+    }
 }

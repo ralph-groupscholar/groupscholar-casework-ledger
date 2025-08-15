@@ -61,11 +61,6 @@ final class Commands
             return;
         }
 
-        if ($command === 'seed') {
-            self::handleSeed($options);
-            return;
-        }
-
         fwrite(STDERR, "Unknown command: {$command}\n");
         self::printHelp();
         exit(1);
@@ -244,32 +239,6 @@ final class Commands
         fwrite(STDOUT, "Exported " . count($notes) . " notes to {$output}.\n");
     }
 
-    private static function handleSeed(array $options): void
-    {
-        $force = self::optionTruthy($options, 'force');
-
-        $pdo = Database::connect();
-        $dsn = getenv('GS_CASEWORK_DSN') ?: '';
-        $schema = Database::schema();
-        $driver = Database::driver($pdo, $dsn);
-
-        Schema::ensure($pdo, $driver, $schema);
-        $repo = new CaseworkRepository($pdo, $schema, $driver);
-
-        $existing = $repo->countNotes();
-        if ($existing > 0 && !$force) {
-            fwrite(STDERR, "Seed aborted: {$existing} notes already exist. Re-run with --force to append.\n");
-            exit(1);
-        }
-
-        $notes = CaseworkSeed::notes();
-        foreach ($notes as $note) {
-            $repo->addNote($note);
-        }
-
-        fwrite(STDOUT, "Seeded " . count($notes) . " casework notes.\n");
-    }
-
     private static function handleFollowUps(array $options): void
     {
         $today = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d');
@@ -362,16 +331,6 @@ final class Commands
         return $options;
     }
 
-    private static function optionTruthy(array $options, string $key): bool
-    {
-        if (!array_key_exists($key, $options)) {
-            return false;
-        }
-
-        $value = strtolower((string) $options[$key]);
-        return in_array($value, ['true', '1', 'yes', 'y', 'on'], true);
-    }
-
     private static function printHelp(): void
     {
         $help = <<<TXT
@@ -386,8 +345,6 @@ Usage:
   gs-casework followups [--scholar="Name"] [--priority=high] [--start=YYYY-MM-DD] [--end=YYYY-MM-DD] [--days=14] [--overdue=true]
   gs-casework resolve --id=123 [--completed="YYYY-MM-DD HH:MM:SS"]
   gs-casework export [--scholar="Name"] [--priority=high] [--since="YYYY-MM-DD"] [--status=open] [--output=casework.csv]
-  gs-casework seed [--force=true]
-
 Environment:
   GS_CASEWORK_DSN (required)
   GS_CASEWORK_DB_USER
