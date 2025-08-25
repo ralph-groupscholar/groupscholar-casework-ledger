@@ -56,6 +56,11 @@ final class Commands
             return;
         }
 
+        if ($command === 'queue') {
+            self::handleQueue($options);
+            return;
+        }
+
         if ($command === 'export') {
             self::handleExport($options);
             return;
@@ -316,6 +321,46 @@ final class Commands
         fwrite(STDOUT, "Resolved note {$options['id']}.\n");
     }
 
+    private static function handleQueue(array $options): void
+    {
+        $today = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d');
+        $limit = (int) ($options['limit'] ?? 50);
+        if ($limit <= 0) {
+            $limit = 50;
+        }
+
+        $pdo = Database::connect();
+        $dsn = getenv('GS_CASEWORK_DSN') ?: '';
+        $schema = Database::schema();
+        $driver = Database::driver($pdo, $dsn);
+        $repo = new CaseworkRepository($pdo, $schema, $driver);
+
+        $rows = $repo->openQueueSummary([
+            'priority' => $options['priority'] ?? '',
+            'since' => $options['since'] ?? '',
+            'today' => $today,
+            'limit' => $limit,
+        ]);
+
+        if (!$rows) {
+            fwrite(STDOUT, "No open queue items found.\n");
+            return;
+        }
+
+        fwrite(STDOUT, "Open casework queue (top {$limit}):\n");
+        foreach ($rows as $row) {
+            $line = sprintf(
+                "%s | open %s | overdue %s | next %s | last %s\n",
+                $row['scholar_name'],
+                $row['open_count'],
+                $row['overdue_count'] ?? '0',
+                $row['next_follow_up'] ?? 'n/a',
+                $row['last_note_at']
+            );
+            fwrite(STDOUT, $line);
+        }
+    }
+
     private static function parseOptions(array $args): array
     {
         $options = [];
@@ -344,6 +389,7 @@ Usage:
   gs-casework stats [--days=30]
   gs-casework followups [--scholar="Name"] [--priority=high] [--start=YYYY-MM-DD] [--end=YYYY-MM-DD] [--days=14] [--overdue=true]
   gs-casework resolve --id=123 [--completed="YYYY-MM-DD HH:MM:SS"]
+  gs-casework queue [--priority=high] [--since="YYYY-MM-DD"] [--limit=50]
   gs-casework export [--scholar="Name"] [--priority=high] [--since="YYYY-MM-DD"] [--status=open] [--output=casework.csv]
 Environment:
   GS_CASEWORK_DSN (required)

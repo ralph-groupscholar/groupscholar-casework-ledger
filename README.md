@@ -8,6 +8,7 @@ A lightweight PHP CLI for logging scholar casework signals (attendance, academic
 - Resolve completed follow-ups to keep outreach queues clean.
 - Generate quick stats snapshots for recent activity.
 - Track upcoming or overdue follow-ups for outreach planning.
+- See open queue summaries by scholar for workload balancing.
 - Export filtered notes to CSV for reporting.
 
 ## Setup
@@ -41,6 +42,7 @@ export GS_CASEWORK_SCHEMA="groupscholar_casework_ledger"
 ./bin/gs-casework stats --days=30
 ./bin/gs-casework followups --days=21
 ./bin/gs-casework followups --overdue=true --priority=high
+./bin/gs-casework queue --priority=high --since="2026-01-01" --limit=10
 ./bin/gs-casework export --output=casework.csv --status=open
 ./bin/gs-casework seed --force=true
 ```

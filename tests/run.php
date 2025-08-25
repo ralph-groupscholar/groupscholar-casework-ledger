@@ -104,4 +104,15 @@ $resolved = $repo->listNotes([
 ]);
 assertTrue(count($resolved) === 2, 'expected seeded and resolved note');
 
+$queue = $repo->openQueueSummary([
+    'priority' => '',
+    'since' => '2000-01-01 00:00:00',
+    'today' => '2026-02-10',
+    'limit' => 20,
+]);
+assertTrue(count($queue) === 5, 'expected five scholars in open queue');
+$queueNames = array_column($queue, 'scholar_name');
+assertTrue(!in_array('Overdue Scholar', $queueNames, true), 'expected resolved overdue scholar excluded');
+assertTrue(in_array('Avery Johnson', $queueNames, true), 'expected seeded open scholar in queue');
+
 fwrite(STDOUT, "All tests passed.\n");

@@ -5,3 +5,4 @@
 - 2026-02-08: Added resolve workflow with status/completed_at tracking, status filtering/export updates, schema migrations, and refreshed seed data with resolved examples.
 - 2026-02-08: Added shared seed data helper, CLI seed command with force guard, repository count helper, and refreshed docs/tests. Verified production DB already contains seeded notes.
 - 2026-02-08: Added idempotent seed workflow for casework notes, cleaned duplicate seed handler, updated tests for seeded follow-ups, and verified production schema readiness.
+- 2026-02-08: Added open queue summary command with per-scholar rollups, repository support, tests, and docs updates.
